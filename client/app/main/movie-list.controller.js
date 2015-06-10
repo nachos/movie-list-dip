@@ -116,7 +116,9 @@ angular.module('movieListApp')
     instance.onChange(function (config) {
       $scope.config.instance = config;
       $timeout(function () {
-        loadMovies();
+        loadMovies(function () {
+          $scope.initialLoading = true;
+        });
       });
     });
 
