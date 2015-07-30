@@ -7,25 +7,25 @@ angular.module('movieListApp')
     var globalConfig = dipApi.global();
     var instance = dipApi.instance();
 
-    globalConfig.get(function (err, config) {
-      if(err){
+    globalConfig.get()
+      .then(function (config) {
+        $timeout(function () {
+          $scope.config.global = config;
+        });
+      })
+      .catch(function (err) {
         notify(err);
-      }
-
-      $timeout(function () {
-        $scope.config.global = config;
       });
-    });
 
-    instance.get(function (err, config) {
-      if(err){
+    instance.get()
+      .then(function (config) {
+        $timeout(function () {
+          $scope.config.instance = config;
+        });
+      })
+      .catch(function (err) {
         notify(err);
-      }
-
-      $timeout(function () {
-        $scope.config.instance = config;
       });
-    });
 
     instance.onChange(function (config) {
       $timeout(function () {
@@ -35,7 +35,7 @@ angular.module('movieListApp')
 
     $scope.fileChanged = function (ele) {
       $timeout(function () {
-        if(!$scope.config.instance) {
+        if (!$scope.config.instance) {
           $scope.config.instance = {};
         }
         $scope.config.instance.directory = ele.files[0].path;
@@ -43,18 +43,18 @@ angular.module('movieListApp')
     };
 
     $scope.save = function () {
-      instance.save($scope.config.instance, function (err) {
-        if(err){
+      instance.save($scope.config.instance)
+        .then(function () {
+          notify('Changes saved!');
+
+          $state.go('main');
+        })
+        .catch(function (err) {
           notify(err);
-        }
-
-        notify('Changes saved!');
-
-        $state.go('main');
-      });
+        });
     };
 
-    function notify (msg) {
+    function notify(msg) {
       $mdToast.show(
         $mdToast.simple()
           .content(msg)

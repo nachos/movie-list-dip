@@ -1,11 +1,10 @@
 'use strict';
 
 angular.module('movieListApp')
-  .controller('MovieList', function ($scope, $timeout, $log, $mdToast, $state) {
+  .controller('MovieList', function ($scope, $timeout, $log, $mdToast, $state, $q) {
     var movieList = require('movie-list');
     var movieInfo = require('movie-info');
     var _ = require('lodash');
-    var Q = require('q');
 
     var sortMovies = function (movies) {
       return _.sortBy(movies, function (movie) {
@@ -14,22 +13,16 @@ angular.module('movieListApp')
     };
 
     var getBackdrop = function (chosenMovie) {
-      var deferred = Q.defer();
       if (!chosenMovie.backdrop) {
         $scope.loading = true;
-        movieInfo(chosenMovie.response.Title, function (err, res) {
-          if (err) {
-            deferred.reject(err);
-          } else {
+        return $q.nfcall(movieInfo, chosenMovie.response.Title)
+          .then(function (res) {
             chosenMovie.backdrop = "https://image.tmdb.org/t/p/w780" + res.backdrop_path;
-            deferred.resolve();
-          }
-        });
+            return $q.resolve();
+          });
       }
-      else {
-        deferred.resolve();
-      }
-      return deferred.promise;
+
+      return $q.resolve();
     };
 
     $scope.initialLoading = true;
@@ -42,15 +35,13 @@ angular.module('movieListApp')
             $scope.loading = false;
           });
         });
-
     };
 
     $scope.playChosen = function () {
-      dipApi.system.open({ path: $scope.chosenMovie.path });
+      dipApi.system.open({path: $scope.chosenMovie.path});
     };
 
-    var loadMovies = function (cb) {
-
+    var loadMovies = function () {
       if (!$scope.config.instance.directory) {
         $state.go('settings');
       }
@@ -58,27 +49,22 @@ angular.module('movieListApp')
       $scope.movies = [];
       $scope.loading = true;
 
-      movieList.listFolder($scope.config.instance.directory, function (err, listData) {
-        if (err) {
-          return console.log(err);
-        }
+      return movieList.listFolder($scope.config.instance.directory)
+        .then(function (listData) {
+          if (!listData.succeeded) {
+            notify('Empty movie directory');
 
-        if (!listData.succeeded) {
-          notify('Empty movie directory');
+            $state.go('settings');
+          }
 
-          $state.go('settings');
-        }
+          $timeout(function () {
+            $scope.movies = sortMovies(listData.succeeded);
 
-        $timeout(function () {
-          $scope.movies = sortMovies(listData.succeeded);
+            var mostRanked = _.first($scope.movies);
 
-          var mostRanked = _.first($scope.movies);
-
-          $scope.chooseMovie(mostRanked);
-
-          cb();
+            $scope.chooseMovie(mostRanked);
+          });
         });
-      });
     };
 
     function notify(msg) {
@@ -94,31 +80,27 @@ angular.module('movieListApp')
     var globalConfig = dipApi.global();
     var instance = dipApi.instance();
 
-    globalConfig.get(function (err, config) {
-      if (err) {
-        // Deal with this error somehow.. maybe move to settings screen
-        $log.log(err);
-      }
-      $scope.config.global = config;
+    globalConfig.get()
+      .then(function (config) {
+        $scope.config.global = config;
 
-      instance.get(function (err, config) {
-        if (err) {
-          // Deal with this error somehow.. maybe move to settings screen
-          $log.log(err);
-        }
-        $scope.config.instance = config;
-        loadMovies(function () {
-          $scope.initialLoading = false;
-        });
+        return instance.get()
+          .then(function (config) {
+            $scope.config.instance = config;
+            return loadMovies()
+              .then(function () {
+                $scope.initialLoading = false;
+              });
+          });
       });
-    });
 
     instance.onChange(function (config) {
       $scope.config.instance = config;
       $timeout(function () {
-        loadMovies(function () {
-          $scope.initialLoading = true;
-        });
+        loadMovies()
+          .then(function () {
+            $scope.initialLoading = true;
+          });
       });
     });
 
@@ -127,9 +109,10 @@ angular.module('movieListApp')
       $timeout(function () {
         $scope.initialLoading = true;
 
-        loadMovies(function () {
-          $scope.initialLoading = false;
-        });
+        loadMovies()
+          .then(function () {
+            $scope.initialLoading = false;
+          });
         notify('Global settings changed');
       });
     });
