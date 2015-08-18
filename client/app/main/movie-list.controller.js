@@ -1,10 +1,11 @@
 'use strict';
 
 angular.module('movieListApp')
-  .controller('MovieList', function ($scope, $timeout, $log, $mdToast, $state, $q) {
+  .controller('MovieList', function ($scope, $timeout, $log, $mdToast, $state) {
     var movieList = require('movie-list');
     var movieInfo = require('movie-info');
     var _ = require('lodash');
+    var Q = require('q');
 
     var sortMovies = function (movies) {
       return _.sortBy(movies, function (movie) {
@@ -15,14 +16,14 @@ angular.module('movieListApp')
     var getBackdrop = function (chosenMovie) {
       if (!chosenMovie.backdrop) {
         $scope.loading = true;
-        return $q.nfcall(movieInfo, chosenMovie.response.Title)
+        return Q.nfcall(movieInfo, chosenMovie.response.Title)
           .then(function (res) {
             chosenMovie.backdrop = "https://image.tmdb.org/t/p/w780" + res.backdrop_path;
-            return $q.resolve();
+            return Q.resolve();
           });
       }
 
-      return $q.resolve();
+      return Q.resolve();
     };
 
     $scope.initialLoading = true;
