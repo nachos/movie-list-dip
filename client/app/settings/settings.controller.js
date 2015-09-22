@@ -4,8 +4,8 @@ angular.module('movieListApp')
   .controller('Settings', function ($scope, $timeout, $mdToast, $state) {
     $scope.config = {};
 
-    var globalConfig = dipApi.global();
-    var instance = dipApi.instance();
+    var globalConfig = dipApi.settings.global();
+    var instance = dipApi.settings.instance();
 
     globalConfig.get()
       .then(function (config) {

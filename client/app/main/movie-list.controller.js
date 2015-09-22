@@ -78,8 +78,8 @@ angular.module('movieListApp')
 
     $scope.config = {};
 
-    var globalConfig = dipApi.global();
-    var instance = dipApi.instance();
+    var globalConfig = dipApi.settings.global();
+    var instance = dipApi.settings.instance();
 
     globalConfig.get()
       .then(function (config) {
